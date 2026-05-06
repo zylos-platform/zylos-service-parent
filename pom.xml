@@ -53,6 +53,18 @@
   </licenses>
 
   <!-- ======================================================================= -->
+  <!--  Distribution Management                                                -->
+  <!--  Publishes this POM to GitHub Packages so child services can pull it.   -->
+  <!-- ======================================================================= -->
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/zylos-platform/zylos-service-parent</url>
+    </repository>
+  </distributionManagement>
+
+  <!-- ======================================================================= -->
   <!--  Centralized version pins.                                              -->
   <!--                                                                         -->
   <!--  Bump versions HERE and every Zylos service receives the update on its  -->
@@ -535,17 +547,5 @@
     </plugins>
 
   </build>
-
-  <!-- ======================================================================= -->
-  <!--  Distribution Management                                                -->
-  <!--  Publishes this POM to GitHub Packages so child services can pull it.   -->
-  <!-- ======================================================================= -->
-  <distributionManagement>
-    <repository>
-      <id>github</id>
-      <name>GitHub Packages</name>
-      <url>https://maven.pkg.github.com/zylos-platform/zylos-service-parent</url>
-    </repository>
-  </distributionManagement>
 
 </project>
