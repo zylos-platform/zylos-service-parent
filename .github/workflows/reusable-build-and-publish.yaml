@@ -65,6 +65,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: read
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout
@@ -78,6 +81,9 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
           cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
 
       - name: Verify formatting (Spotless)
         run: ./mvnw -B -ntp spotless:check
@@ -92,6 +98,7 @@ jobs:
         run: ./mvnw -B -ntp verify -DskipUnitTests
         env:
           TESTCONTAINERS_RYUK_DISABLED: "true" # Faster CI (Ryuk not needed in ephemeral CI)
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: JaCoCo coverage gate
         run: ./mvnw -B -ntp jacoco:check -Djacoco.coverage.minimum=${{ inputs.coverage-threshold }}
@@ -157,6 +164,8 @@ jobs:
       contents: read
       packages: write
       id-token: write # for future OIDC use (cosign, ECR)
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     outputs:
       image-tag: ${{ steps.compute-tag.outputs.tag }}
@@ -174,6 +183,9 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
           cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
 
       - name: Compute image tag
         id: compute-tag
@@ -196,6 +208,7 @@ jobs:
       - name: Build & push image with Jib
         env:
           JIB_TO_TAG: ${{ steps.compute-tag.outputs.tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./mvnw -B -ntp -DskipTests \
             compile \

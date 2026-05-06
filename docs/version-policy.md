@@ -23,8 +23,8 @@ they are.
 
 Versions we explicitly never use:
 
-| Library | Banned Version | Reason |
-|---------|----------------|--------|
-| Spring Cloud | 2025.1.0 | Incompatible with Spring Boot 4.0.1+ |
-| Spring Boot | 3.4.x | EOL since Dec 2025 |
-| Jackson 2 | < 2.21.1 | Older 2.20.x lost upstream support |
+| Library      | Banned Version | Reason                               |
+| ------------ | -------------- | ------------------------------------ |
+| Spring Cloud | 2025.1.0       | Incompatible with Spring Boot 4.0.1+ |
+| Spring Boot  | 3.4.x          | EOL since Dec 2025                   |
+| Jackson 2    | < 2.21.1       | Older 2.20.x lost upstream support   |
