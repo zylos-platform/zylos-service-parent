@@ -1,0 +1,340 @@
+###############################################################################
+#
+# Reusable Workflow — Build, Test, and Publish a Zylos Service Image
+#
+# Called from each service repo's ci.yaml on push to main and on tagged
+# releases. Builds with Maven, runs tests, builds an OCI image with Jib,
+# pushes to GHCR, and optionally opens a PR to zylos-platform-bootstrap
+# to update the deployed image tag.
+#
+# Inputs:
+#   service-name        : name of the service (e.g., "zylos-hello-service")
+#   java-version        : Java version (default: 25)
+#   coverage-threshold  : minimum line coverage (passed to JaCoCo)
+#   open-deploy-pr      : whether to open the deploy PR (default: true)
+#   bootstrap-repo      : the GitOps repo to PR against
+#
+# Required permissions in the calling workflow:
+#   contents: read       (checkout)
+#   packages: write      (push to GHCR)
+#   id-token: write      (OIDC, for future ECR/AWS use)
+#
+# Required secrets in the calling repo (or the org):
+#   BOOTSTRAP_REPO_TOKEN : a fine-grained PAT scoped to the bootstrap repo
+#                          with PR-creation permissions. NOT the default
+#                          GITHUB_TOKEN, which can't cross-repo PR.
+#
+###############################################################################
+
+name: Build and Publish (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        type: string
+        required: true
+        description: "Service name, e.g., zylos-hello-service"
+      java-version:
+        type: string
+        default: "25"
+        description: "JDK major version"
+      coverage-threshold:
+        type: string
+        default: "0.70"
+        description: "Minimum JaCoCo line coverage (0.0 to 1.0)"
+      open-deploy-pr:
+        type: boolean
+        default: true
+        description: "Open a PR to the bootstrap repo to deploy this build"
+      bootstrap-repo:
+        type: string
+        default: "zylos-platform/zylos-platform-bootstrap"
+        description: "GitOps repo to PR against"
+    secrets:
+      BOOTSTRAP_REPO_TOKEN:
+        required: false
+        description: "PAT for cross-repo PR; required only if open-deploy-pr=true"
+
+jobs:
+  # ==========================================================================
+  # Build & Test
+  # ==========================================================================
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for git-commit-id plugin
+
+      - name: Set up JDK ${{ inputs.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+
+      - name: Verify formatting (Spotless)
+        run: ./mvnw -B -ntp spotless:check
+
+      - name: Compile
+        run: ./mvnw -B -ntp compile
+
+      - name: Unit tests
+        run: ./mvnw -B -ntp test
+
+      - name: Integration tests
+        run: ./mvnw -B -ntp verify -DskipUnitTests
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "true" # Faster CI (Ryuk not needed in ephemeral CI)
+
+      - name: JaCoCo coverage gate
+        run: ./mvnw -B -ntp jacoco:check -Djacoco.coverage.minimum=${{ inputs.coverage-threshold }}
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.service-name }}-test-reports
+          path: |
+            **/target/surefire-reports
+            **/target/failsafe-reports
+            **/target/site/jacoco
+          retention-days: 7
+
+  # ==========================================================================
+  # Security Scans
+  # ==========================================================================
+  scan:
+    name: Security Scans
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ inputs.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+
+      - name: Trivy filesystem scan (dependencies)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "0" # Don't fail the build (yet); upload to Code Scanning
+
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  # ==========================================================================
+  # Image Build & Publish (GHCR)
+  # ==========================================================================
+  publish-image:
+    name: Build & Publish Image
+    runs-on: ubuntu-latest
+    needs: [build, scan]
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # for future OIDC use (cosign, ECR)
+
+    outputs:
+      image-tag: ${{ steps.compute-tag.outputs.tag }}
+      image-ref: ${{ steps.compute-tag.outputs.image-ref }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ inputs.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+
+      - name: Compute image tag
+        id: compute-tag
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          DATE="$(date -u +%Y%m%d)"
+          TAG="${DATE}-${SHORT_SHA}"
+          REF="ghcr.io/${{ github.repository_owner }}/${{ inputs.service-name }}:${TAG}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "image-ref=${REF}" >> "$GITHUB_OUTPUT"
+          echo "Computed image: ${REF}"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push image with Jib
+        env:
+          JIB_TO_TAG: ${{ steps.compute-tag.outputs.tag }}
+        run: |
+          ./mvnw -B -ntp -DskipTests \
+            compile \
+            com.google.cloud.tools:jib-maven-plugin:3.4.4:build \
+            -Djib.to.image=ghcr.io/${{ github.repository_owner }}/${{ inputs.service-name }} \
+            -Djib.to.tags=${JIB_TO_TAG},latest \
+            -Djib.to.auth.username=${{ github.actor }} \
+            -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          ./mvnw -B -ntp \
+            org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom \
+            -DoutputFormat=json \
+            -DoutputName=sbom
+
+      - name: Upload SBOM artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.service-name }}-sbom-${{ steps.compute-tag.outputs.tag }}
+          path: target/sbom.json
+          retention-days: 30
+
+      - name: Trivy image scan (post-build)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ steps.compute-tag.outputs.image-ref }}
+          format: sarif
+          output: trivy-image.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+
+      - name: Upload Trivy image SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+  # ==========================================================================
+  # GitOps Deploy PR
+  # ==========================================================================
+  deploy-pr:
+    name: Open Deploy PR
+    runs-on: ubuntu-latest
+    needs: publish-image
+    if: ${{ inputs.open-deploy-pr && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout bootstrap repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.bootstrap-repo }}
+          token: ${{ secrets.BOOTSTRAP_REPO_TOKEN }}
+          path: bootstrap
+
+      - name: Update image tag in bootstrap repo
+        id: update
+        env:
+          NEW_TAG: ${{ needs.publish-image.outputs.image-tag }}
+          SERVICE_NAME: ${{ inputs.service-name }}
+        run: |
+          cd bootstrap
+          VALUES_FILE="helm-values/services/${SERVICE_NAME}.yaml"
+          if [[ ! -f "${VALUES_FILE}" ]]; then
+            echo "ERROR: ${VALUES_FILE} not found in bootstrap repo." >&2
+            exit 1
+          fi
+
+          # Replace the line "  tag: <something>" inside the image: block.
+          # Tolerates both quoted and unquoted tag values.
+          python3 - <<PY
+          import re, pathlib, sys, os
+          p = pathlib.Path("${VALUES_FILE}")
+          text = p.read_text()
+          new_tag = os.environ["NEW_TAG"]
+          # Naive but correct for our values shape: image:\n  repository: ...\n  tag: X
+          new_text, count = re.subn(
+              r'(image:\s*\n(?:\s+\w+:.*\n)*?\s+tag:\s*)["\']?[^"\'\n]*["\']?',
+              lambda m: m.group(1) + '"' + new_tag + '"',
+              text,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          if count == 0:
+              print("ERROR: no image.tag field found in", p, file=sys.stderr)
+              sys.exit(2)
+          p.write_text(new_text)
+          PY
+
+          if git diff --quiet; then
+            echo "No change required. Skipping PR."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create PR
+        if: steps.update.outputs.skip != 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          path: bootstrap
+          token: ${{ secrets.BOOTSTRAP_REPO_TOKEN }}
+          branch: deploy/${{ inputs.service-name }}-${{ needs.publish-image.outputs.image-tag }}
+          title: "deploy(${{ inputs.service-name }}): bump image to ${{ needs.publish-image.outputs.image-tag }}"
+          commit-message: |
+            deploy(${{ inputs.service-name }}): bump image to ${{ needs.publish-image.outputs.image-tag }}
+
+            Built from: ${{ github.repository }}@${{ github.sha }}
+            CI run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          body: |
+            ## Automated Deploy PR
+
+            **Service:** `${{ inputs.service-name }}`
+            **New image:** `${{ needs.publish-image.outputs.image-ref }}`
+            **Source commit:** ${{ github.repository }}@${{ github.sha }}
+            **Source CI run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            ### What this changes
+
+            Updates `helm-values/services/${{ inputs.service-name }}.yaml` to deploy
+            the new image tag. Argo CD will reconcile the cluster on merge.
+
+            ### Verification
+
+            After merge, watch reconciliation:
+
+            ```bash
+            kubectl get applications -n argocd ${{ inputs.service-name }} -w
+            kubectl -n zylos-services rollout status deployment/${{ inputs.service-name }}
+            ```
+
+            ---
+
+            *Auto-generated by zylos-service-parent reusable workflow.*
+          labels: |
+            automated
+            deploy
+          delete-branch: true
