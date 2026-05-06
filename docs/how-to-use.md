@@ -24,6 +24,7 @@ In the service's `pom.xml`:
 That's it. By inheriting, the service gets:
 
 ### Automatic Behavior
+
 - Java 25 compilation with `-parameters` and warnings-as-errors.
 - Spotless formatting check on `validate`.
 - JaCoCo coverage check on `verify` (70% line coverage minimum).
@@ -31,6 +32,7 @@ That's it. By inheriting, the service gets:
 - Git SHA / branch / build-time stamped into `git.properties`.
 
 ### Always-Included Dependencies
+
 - `spring-boot-starter-actuator` (health/readiness probes).
 - `org.jspecify:jspecify` (null-safety annotations).
 - `net.logstash.logback:logstash-logback-encoder` (structured JSON logs).
@@ -38,6 +40,7 @@ That's it. By inheriting, the service gets:
 - `archunit-junit5` (test scope).
 
 ### Version-Managed (declare without versions)
+
 - All Spring Boot 4.0.6 dependencies.
 - All Spring Cloud 2025.1.1 dependencies.
 - Spring Modulith 2.0.5.
@@ -55,34 +58,34 @@ Every service must include at minimum:
 
 ```yaml
 spring:
-  application:
-    name: zylos-<service-name>     # MUST match service identity
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
+    application:
+        name: zylos-<service-name> # MUST match service identity
+    profiles:
+        active: ${SPRING_PROFILES_ACTIVE:local}
 
 management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus,metrics
-  endpoint:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,prometheus,metrics
+    endpoint:
+        health:
+            probes:
+                enabled: true
+            show-details: when-authorized
     health:
-      probes:
-        enabled: true
-      show-details: when-authorized
-  health:
-    livenessstate:
-      enabled: true
-    readinessstate:
-      enabled: true
-  info:
-    git:
-      mode: full
-  opentelemetry:
-    resource-attributes:
-      service.name: ${spring.application.name}
-      service.version: ${project.version}
-      deployment.environment: ${spring.profiles.active}
+        livenessstate:
+            enabled: true
+        readinessstate:
+            enabled: true
+    info:
+        git:
+            mode: full
+    opentelemetry:
+        resource-attributes:
+            service.name: ${spring.application.name}
+            service.version: ${project.version}
+            deployment.environment: ${spring.profiles.active}
 ```
 
 ### Required Module Layout (Hexagonal)

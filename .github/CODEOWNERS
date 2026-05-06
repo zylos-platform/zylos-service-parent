@@ -1,8 +1,11 @@
 ## Default owners for everything in the repo
+
 **@kamesh-chathuranga**
 
 ## Build Config
+
 /build-config/ @kamesh-chathuranga
 
 ## CI workflows
+
 /.github/workflows/ @kamesh-chathuranga

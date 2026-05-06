@@ -8,17 +8,17 @@ backend.**
 
 ## Pinned Stack (April 2026)
 
-| Component | Version |
-|-----------|---------|
-| Java | 25 (LTS) |
-| Spring Boot | 4.0.6 |
-| Spring Cloud | 2025.1.1 (Oakwood) |
-| Spring Modulith | 2.0.5 |
-| Resilience4j | 2.4.0 (`resilience4j-spring-boot3` artifact) |
-| MapStruct | 1.6.3 |
-| Testcontainers | 2.0.5 (new naming) |
-| Confluent Platform | 8.0.0 |
-| Apache Avro | 1.12.0 |
+| Component          | Version                                      |
+| ------------------ | -------------------------------------------- |
+| Java               | 25 (LTS)                                     |
+| Spring Boot        | 4.0.6                                        |
+| Spring Cloud       | 2025.1.1 (Oakwood)                           |
+| Spring Modulith    | 2.0.5                                        |
+| Resilience4j       | 2.4.0 (`resilience4j-spring-boot3` artifact) |
+| MapStruct          | 1.6.3                                        |
+| Testcontainers     | 2.0.5 (new naming)                           |
+| Confluent Platform | 8.0.0                                        |
+| Apache Avro        | 1.12.0                                       |
 
 See [`docs/how-to-use.md`](docs/how-to-use.md) for the inheritance guide.
 See [`docs/version-policy.md`](docs/version-policy.md) for the bump policy.

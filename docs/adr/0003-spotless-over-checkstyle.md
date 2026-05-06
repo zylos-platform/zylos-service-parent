@@ -21,7 +21,7 @@ Use **Spotless Maven Plugin 2.46.1** with **Palantir Java Format**.
   fixes.
 - **Palantir Java Format** is forked from Google Java Format with more
   pleasant defaults: 4-space indentation, 120-character lines (vs. Google's
-  4-space + 100). 
+  4-space + 100).
 - **Single tool, single source of formatting truth.** No bikeshedding in
   PRs about whitespace.
 

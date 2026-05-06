@@ -1,6 +1,7 @@
 # Documentation
 
 This directory holds:
+
 - **Architecture Decision Records (ADRs)** — `docs/adr/`
 - **Runbooks** — `docs/runbooks/`
 - **Deployment guides** — `docs/deployment/`
