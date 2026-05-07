@@ -212,7 +212,7 @@ jobs:
         run: |
           ./mvnw -B -ntp -DskipTests \
             compile \
-            com.google.cloud.tools:jib-maven-plugin:3.4.4:build \
+            jib:build \
             -Djib.to.image=ghcr.io/${{ github.repository_owner }}/${{ inputs.service-name }} \
             -Djib.to.tags=${JIB_TO_TAG},latest \
             -Djib.to.auth.username=${{ github.actor }} \
