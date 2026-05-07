@@ -399,6 +399,20 @@
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
           <version>${jacoco-maven-plugin.version}</version>
+          <configuration>
+            <rules>
+              <rule>
+                <element>BUNDLE</element>
+                <limits>
+                  <limit>
+                    <counter>LINE</counter>
+                    <value>COVEREDRATIO</value>
+                    <minimum>${jacoco.coverage.minimum}</minimum>
+                  </limit>
+                </limits>
+              </rule>
+            </rules>
+          </configuration>
           <executions>
             <execution>
               <id>prepare-agent</id>
@@ -419,20 +433,6 @@
                 <goal>check</goal>
               </goals>
               <phase>verify</phase>
-              <configuration>
-                <rules>
-                  <rule>
-                    <element>BUNDLE</element>
-                    <limits>
-                      <limit>
-                        <counter>LINE</counter>
-                        <value>COVEREDRATIO</value>
-                        <minimum>${jacoco.coverage.minimum}</minimum>
-                      </limit>
-                    </limits>
-                  </rule>
-                </rules>
-              </configuration>
             </execution>
           </executions>
         </plugin>
