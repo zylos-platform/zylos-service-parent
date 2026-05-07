@@ -164,6 +164,7 @@ jobs:
       contents: read
       packages: write
       id-token: write # for future OIDC use (cosign, ECR)
+      security-events: write
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
