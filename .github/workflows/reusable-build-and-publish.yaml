@@ -4,7 +4,7 @@
 #
 # Called from each service repo's ci.yaml on push to main and on tagged
 # releases. Builds with Maven, runs tests, builds an OCI image with Jib,
-# pushes to GHCR, and optionally opens a PR to zylos-platform-bootstrap
+# pushes to GHCR, and optionally opens a PR to zylos-infra-gitops
 # to update the deployed image tag.
 #
 # Inputs:
@@ -49,7 +49,7 @@ on:
         description: "Open a PR to the bootstrap repo to deploy this build"
       bootstrap-repo:
         type: string
-        default: "zylos-platform/zylos-platform-bootstrap"
+        default: "zylos-platform/zylos-infra-gitops"
         description: "GitOps repo to PR against"
     secrets:
       BOOTSTRAP_REPO_TOKEN:
