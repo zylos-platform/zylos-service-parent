@@ -93,6 +93,7 @@
     <testcontainers.version>2.0.5</testcontainers.version>
     <wiremock.version>3.10.0</wiremock.version>
     <archunit.version>1.3.0</archunit.version>
+    <junit.jupiter.version>6.0.3</junit.jupiter.version>
 
     <!-- Kafka & Schema Registry ==================================== -->
     <confluent.version>8.0.0</confluent.version>
@@ -208,6 +209,14 @@
         <groupId>org.wiremock</groupId>
         <artifactId>wiremock-standalone</artifactId>
         <version>${wiremock.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- JUnit Jupiter for unit tests-->
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${junit.jupiter.version}</version>
         <scope>test</scope>
       </dependency>
 
