@@ -9,7 +9,7 @@ backend.**
 ## Pinned Stack (April 2026)
 
 | Component          | Version                                      |
-| ------------------ | -------------------------------------------- |
+|--------------------|----------------------------------------------|
 | Java               | 25 (LTS)                                     |
 | Spring Boot        | 4.0.6                                        |
 | Spring Cloud       | 2025.1.1 (Oakwood)                           |
@@ -39,6 +39,19 @@ mvn -B -ntp enforcer:enforce  # JDK + Maven version + dependency rules
 
 You don't `mvn install` this repo unless you intend to publish it locally
 for downstream consumption.
+
+## Enforcement
+
+In addition to version management and shared plugin configuration, this parent
+enforces platform invariants at build time:
+
+- **Java 25 / Maven 3.8.7+** (`requireJavaVersion`, `requireMavenVersion`)
+- **Dependency convergence** (`dependencyConvergence`)
+- **Mandatory security starter** — every service must declare
+  `app.zylos:zylos-infra-security-starter`, or the build fails (ADR 0004)
+
+These run automatically for every inheriting service via the always-active
+Enforcer plugin.
 
 ## Contributing
 

@@ -26,3 +26,27 @@ All commits must be signed (SSH signing).
 ## Local Development
 
 See [README.md](README.md).
+
+## Mandatory Security Starter
+
+Every Zylos service **must** declare a dependency on the security starter:
+
+```xml
+
+<dependency>
+    <groupId>app.zylos</groupId>
+    <artifactId>zylos-infra-security-starter</artifactId>
+</dependency>
+```
+
+No version is needed — it's managed by this parent.
+
+This is enforced at build time by a Maven Enforcer rule (ADR 0004). A service
+that omits the starter fails the build at the `validate` phase with a message
+explaining the fix. The check is automatic; you don't add anything to your
+project to activate it.
+
+If a parent-inheriting project legitimately should not include the starter
+(rare — e.g. a pure non-network library), add its artifactId to the
+`zylos.security-starter.enforcement.exempt` property and document the exception
+in an ADR.

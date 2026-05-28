@@ -8,6 +8,7 @@ This document explains how a Zylos backend service inherits from
 In the service's `pom.xml`:
 
 ```xml
+
 <parent>
     <groupId>app.zylos</groupId>
     <artifactId>zylos-service-parent</artifactId>
@@ -112,3 +113,51 @@ are non-breaking.
 
 File issues against `zylos-service-parent` for any cross-service version,
 plugin, or build configuration concern.
+
+### Security starter (mandatory)
+
+Every service declares the security starter. The build fails without it
+(ADR 0004):
+
+```xml
+
+<dependency>
+    <groupId>app.zylos</groupId>
+    <artifactId>zylos-infra-security-starter</artifactId>
+</dependency>
+```
+
+### Optional: defense-in-depth ArchUnit test
+
+The enforcer rule guarantees the starter is *declared*. For an additional
+test-time assertion — and a home for service-specific architectural rules —
+add an ArchUnit test to your service's suite:
+
+```java
+package app.zylos.yourservice.architecture;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import org.junit.jupiter.api.Test;
+
+class SecurityStarterPresenceTest {
+
+    @Test
+    void securityStarterAutoConfigurationIsOnTheClasspath() {
+        JavaClasses autoConfig =
+            new ClassFileImporter().importPackages("app.zylos.security.autoconfigure");
+
+        assertThat(autoConfig)
+            .as("zylos-infra-security-starter auto-configuration must be present; "
+                + "the service ships with no security stack without it")
+            .isNotEmpty();
+    }
+}
+```
+
+`archunit-junit5` is already on the test classpath (inherited from the parent).
+This test is optional — the enforcer is the authoritative guard — but it gives
+you a place to grow stricter rules, for example asserting that every
+`@RestController` resides under a package your security config covers.

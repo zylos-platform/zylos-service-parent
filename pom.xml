@@ -102,6 +102,11 @@
     <!-- Null safety ================================================ -->
     <jspecify.version>1.0.0</jspecify.version>
 
+    <!-- Zylos internal libraries ================================== -->
+    <zylos-security-starter.version>0.1.0</zylos-security-starter.version>
+
+    <zylos.security-starter.enforcement.exempt>zylos-service-parent,zylos-infra-security-starter</zylos.security-starter.enforcement.exempt>
+
     <!-- Utilities ================================================== -->
     <uuid-creator.version>6.0.0</uuid-creator.version>
 
@@ -233,6 +238,13 @@
         <groupId>org.jspecify</groupId>
         <artifactId>jspecify</artifactId>
         <version>${jspecify.version}</version>
+      </dependency>
+
+      <!-- Zylos security starter — mandatory on every service (see ADR 0004). -->
+      <dependency>
+        <groupId>app.zylos</groupId>
+        <artifactId>zylos-infra-security-starter</artifactId>
+        <version>${zylos-security-starter.version}</version>
       </dependency>
 
       <!-- UUID v7 (time-ordered UUIDs for event envelopes) -->
@@ -460,6 +472,44 @@
               </requireMavenVersion>
               <dependencyConvergence/>
               <banDuplicatePomDependencyVersions/>
+              <evaluateBeanshell>
+                <condition><![CDATA[
+                  String self = "${project.artifactId}";
+                  String exemptStr = "${zylos.security-starter.enforcement.exempt}";
+                  String deps = "${project.dependencies}";
+
+                  boolean isExempt = false;
+                  String[] exempts = exemptStr.split("\\s*,\\s*");
+                  for (int i = 0; i < exempts.length; i++) {
+                      if (exempts[i].equals(self)) {
+                          isExempt = true;
+                          break;
+                      }
+                  }
+
+                  // 'deps' evaluates to a string like "[Dependency {groupId=..., artifactId=..., version=...}]"
+                  // The comma ensures we don't accidentally match a suffix like "-test"
+                  boolean hasStarter = deps.contains("groupId=app.zylos,") &&
+                                       deps.contains("artifactId=zylos-infra-security-starter,");
+
+                  return isExempt || hasStarter;
+                ]]></condition>
+                <message>This Zylos service must declare a dependency on app.zylos:zylos-infra-security-starter.
+                  It provides the mandatory security stack: JWT validation, actor-chain authorization,
+                  OPA integration, and identity observability.
+
+                  Add to your pom.xml (no version needed — managed by zylos-service-parent):
+
+                  &lt;dependency&gt;
+                  &lt;groupId&gt;app.zylos&lt;/groupId&gt;
+                  &lt;artifactId&gt;zylos-infra-security-starter&lt;/artifactId&gt;
+                  &lt;/dependency&gt;
+
+                  If this project legitimately should NOT include the starter (rare; e.g. a
+                  non-network library), add its artifactId to the
+                  zylos.security-starter.enforcement.exempt property and record the exception
+                  in an ADR.</message>
+              </evaluateBeanshell>
             </rules>
           </configuration>
           <executions>
