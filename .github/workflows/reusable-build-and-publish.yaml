@@ -88,20 +88,11 @@ jobs:
       - name: Verify formatting (Spotless)
         run: ./mvnw -B -ntp spotless:check
 
-      - name: Compile
-        run: ./mvnw -B -ntp compile
-
-      - name: Unit tests
-        run: ./mvnw -B -ntp test
-
-      - name: Integration tests
-        run: ./mvnw -B -ntp verify -DskipUnitTests
+      - name: Build, Test, and Verify Coverage
+        run: ./mvnw -B -ntp clean verify -Djacoco.coverage.minimum=${{ inputs.coverage-threshold }}
         env:
-          TESTCONTAINERS_RYUK_DISABLED: "true" # Faster CI (Ryuk not needed in ephemeral CI)
+          TESTCONTAINERS_RYUK_DISABLED: "true"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: JaCoCo coverage gate
-        run: ./mvnw -B -ntp jacoco:check -Djacoco.coverage.minimum=${{ inputs.coverage-threshold }}
 
       - name: Upload test reports
         if: always()
