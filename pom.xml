@@ -103,7 +103,7 @@
     <jspecify.version>1.0.0</jspecify.version>
 
     <!-- Zylos internal libraries ================================== -->
-    <zylos-security-starter.version>0.1.0</zylos-security-starter.version>
+    <zylos-security-starter.version>0.2.0</zylos-security-starter.version>
 
     <zylos.security-starter.enforcement.exempt>zylos-service-parent,zylos-infra-security-starter</zylos.security-starter.enforcement.exempt>
 
