@@ -267,7 +267,7 @@ jobs:
           SERVICE_NAME: ${{ inputs.service-name }}
         run: |
           cd bootstrap
-          VALUES_FILE="helm-values/services/${SERVICE_NAME}.yaml"
+          VALUES_FILE="helm-values/services/${SERVICE_NAME}/values.yaml"
           if [[ ! -f "${VALUES_FILE}" ]]; then
             echo "ERROR: ${VALUES_FILE} not found in bootstrap repo." >&2
             exit 1
