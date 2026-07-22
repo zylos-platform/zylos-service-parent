@@ -79,7 +79,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!-- Zylos contracts ============================================ -->
-    <zylos-contracts.version>1.0.0</zylos-contracts.version>
+    <zylos-contracts.version>1.0.1</zylos-contracts.version>
 
     <!-- Spring portfolio =========================================== -->
     <spring-cloud.version>2025.1.2</spring-cloud.version>
