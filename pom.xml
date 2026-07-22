@@ -78,6 +78,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
+    <!-- Zylos contracts ============================================ -->
+    <zylos-contracts.version>1.0.0</zylos-contracts.version>
+
     <!-- Spring portfolio =========================================== -->
     <spring-cloud.version>2025.1.2</spring-cloud.version>
     <spring-modulith.version>2.1.0</spring-modulith.version>
@@ -245,6 +248,18 @@
         <groupId>app.zylos</groupId>
         <artifactId>zylos-infra-security-starter</artifactId>
         <version>${zylos-security-starter.version}</version>
+      </dependency>
+
+      <!-- Zylos contracts -->
+      <dependency>
+        <groupId>app.zylos</groupId>
+        <artifactId>zylos-contracts-avro</artifactId>
+        <version>${zylos-contracts.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>app.zylos</groupId>
+        <artifactId>zylos-contracts-proto</artifactId>
+        <version>${zylos-contracts.version}</version>
       </dependency>
 
       <!-- UUID v7 (time-ordered UUIDs for event envelopes) -->
