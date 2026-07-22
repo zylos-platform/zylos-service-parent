@@ -107,8 +107,7 @@
 
     <!-- Zylos internal libraries ================================== -->
     <zylos-security-starter.version>0.2.1</zylos-security-starter.version>
-
-    <zylos.security-starter.enforcement.exempt>zylos-service-parent,zylos-infra-security-starter</zylos.security-starter.enforcement.exempt>
+    <zylos.security.enforce>true</zylos.security.enforce>
 
     <!-- Utilities ================================================== -->
     <uuid-creator.version>6.0.0</uuid-creator.version>
@@ -523,25 +522,30 @@
               <banDuplicatePomDependencyVersions/>
               <evaluateBeanshell>
                 <condition><![CDATA[
-                  String self = "${project.artifactId}";
-                  String exemptStr = "${zylos.security-starter.enforcement.exempt}";
-                  String deps = "${project.dependencies}";
-
-                  boolean isExempt = false;
-                  String[] exempts = exemptStr.split("\\s*,\\s*");
-                  for (int i = 0; i < exempts.length; i++) {
-                      if (exempts[i].equals(self)) {
-                          isExempt = true;
-                          break;
-                      }
+                  // Check if the project explicitly disabled enforcement
+                  String enforce = "${zylos.security.enforce}";
+                  if ("false".equalsIgnoreCase(enforce)) {
+                      return true;
                   }
 
-                  // 'deps' evaluates to a string like "[Dependency {groupId=..., artifactId=..., version=...}]"
-                  // The comma ensures we don't accidentally match a suffix like "-test"
+                  // Exempt the POM-packaging projects (like parents and aggregators)
+                  String packaging = "${project.packaging}";
+                  if ("pom".equals(packaging)) {
+                      return true;
+                  }
+
+                  // Exempt the security starter itself
+                  String artifactId = "${project.artifactId}";
+                  if ("zylos-infra-security-starter".equals(artifactId)) {
+                      return true;
+                  }
+
+                  // Otherwise, verify the dependency exists
+                  String deps = "${project.dependencies}";
                   boolean hasStarter = deps.contains("groupId=app.zylos,") &&
                                        deps.contains("artifactId=zylos-infra-security-starter,");
 
-                  return isExempt || hasStarter;
+                  return hasStarter;
                 ]]></condition>
                 <message>This Zylos service must declare a dependency on app.zylos:zylos-infra-security-starter.
                   It provides the mandatory security stack: JWT validation, actor-chain authorization,
@@ -555,9 +559,12 @@
                   &lt;/dependency&gt;
 
                   If this project legitimately should NOT include the starter (rare; e.g. a
-                  non-network library), add its artifactId to the
-                  zylos.security-starter.enforcement.exempt property and record the exception
-                  in an ADR.</message>
+                  non-network library or contract module), disable this check by adding
+                  the following property to your pom.xml:
+
+                  &lt;properties&gt;
+                  &lt;zylos.security.enforce&gt;false&lt;/zylos.security.enforce&gt;
+                  &lt;/properties&gt;</message>
               </evaluateBeanshell>
             </rules>
           </configuration>
