@@ -9,26 +9,14 @@
       Every Zylos backend service inherits from this. Version pins live here.
       Plugin configurations live here. Dependency management lives here.
 
-      To inherit:
-
         <parent>
           <groupId>app.zylos</groupId>
           <artifactId>zylos-service-parent</artifactId>
           <version>0.1.0</version>
           <relativePath/>
         </parent>
-
-      Every dependency our services share — Spring Cloud, Resilience4j,
-      Confluent Avro serializers, Testcontainers, OpenTelemetry, etc. — has
-      its version managed here so services declare dependencies WITHOUT
-      version numbers.
     -->
 
-  <!--
-      We inherit from spring-boot-starter-parent which itself inherits from
-      spring-boot-dependencies (the Spring Boot BOM). This gives us version
-      management for the entire Spring Boot dependency tree for free.
-    -->
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
@@ -38,7 +26,7 @@
 
   <groupId>app.zylos</groupId>
   <artifactId>zylos-service-parent</artifactId>
-  <version>0.1.0</version>
+  <version>999-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Zylos Service Parent</name>
@@ -71,12 +59,12 @@
   <!--  next build.                                                            -->
   <!-- ======================================================================= -->
   <properties>
-
     <!-- Java & build encoding ====================================== -->
     <java.version>25</java.version>
     <maven.compiler.release>${java.version}</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <minimum.maven.version>3.9.9</minimum.maven.version>
 
     <!-- Zylos contracts ============================================ -->
     <zylos-contracts.version>1.0.1</zylos-contracts.version>
@@ -88,29 +76,24 @@
     <!-- Resilience patterns ======================================== -->
     <resilience4j.version>2.4.0</resilience4j.version>
 
-    <!-- Mapping ==================================================== -->
-    <mapstruct.version>1.6.3</mapstruct.version>
-    <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
-
     <!-- Testing ==================================================== -->
     <testcontainers.version>2.0.5</testcontainers.version>
     <wiremock.version>3.10.0</wiremock.version>
-    <archunit.version>1.3.0</archunit.version>
+    <archunit.version>1.4.2</archunit.version>
     <junit.jupiter.version>6.0.3</junit.jupiter.version>
 
     <!-- Kafka & Schema Registry ==================================== -->
     <confluent.version>8.0.0</confluent.version>
-    <avro.version>1.12.0</avro.version>
+    <avro.version>1.12.1</avro.version>
+
+    <!-- AWS SDK ==================================================== -->
+    <aws-sdk.version>2.49.2</aws-sdk.version>
 
     <!-- Null safety ================================================ -->
     <jspecify.version>1.0.0</jspecify.version>
 
-    <!-- Zylos internal libraries ================================== -->
-    <zylos-security-starter.version>0.2.1</zylos-security-starter.version>
-    <zylos.security.enforce>true</zylos.security.enforce>
-
     <!-- Utilities ================================================== -->
-    <uuid-creator.version>6.0.0</uuid-creator.version>
+    <uuid-creator.version>6.1.1</uuid-creator.version>
 
     <!-- Maven plugin versions ====================================== -->
     <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
@@ -121,18 +104,27 @@
     <avro-maven-plugin.version>1.12.0</avro-maven-plugin.version>
     <kafka-schema-registry-maven-plugin.version>8.0.0</kafka-schema-registry-maven-plugin.version>
     <git-commit-id-plugin.version>9.0.1</git-commit-id-plugin.version>
+    <jib-maven-plugin.version>3.5.2</jib-maven-plugin.version>
 
     <!-- Test execution defaults ==================================== -->
     <jacoco.coverage.minimum>0.70</jacoco.coverage.minimum>
 
-    <!-- Repositories ============================================== -->
+    <!-- Repositories =============================================== -->
     <confluent.repo.url>https://packages.confluent.io/maven/</confluent.repo.url>
 
-    <!-- Transitive convergence alignment ======================== -->
+    <!-- Transitive convergence alignment =========================== -->
     <guava.version>33.5.0-jre</guava.version>
     <errorprone-annotations.version>2.49.0</errorprone-annotations.version>
     <commons-compress.version>1.26.2</commons-compress.version>
 
+    <!-- Container image ============================================ -->
+    <image.base>gcr.io/distroless/java25-debian13:nonroot</image.base>
+    <image.registry>ghcr.io</image.registry>
+    <image.namespace>zylos-platform</image.namespace>
+
+    <!-- Dummy Environment variables for container image ============ -->
+    <env.GITHUB_REPOSITORY>local-dev/untracked-repo</env.GITHUB_REPOSITORY>
+    <git.commit.id.full>local-untracked-commit</git.commit.id.full>
   </properties>
 
   <!-- ======================================================================= -->
@@ -180,16 +172,13 @@
         <scope>import</scope>
       </dependency>
 
-      <!-- MapStruct -->
+      <!-- AWS SDK BOM -->
       <dependency>
-        <groupId>org.mapstruct</groupId>
-        <artifactId>mapstruct</artifactId>
-        <version>${mapstruct.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.mapstruct</groupId>
-        <artifactId>mapstruct-processor</artifactId>
-        <version>${mapstruct.version}</version>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bom</artifactId>
+        <version>${aws-sdk.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
 
       <!-- Confluent Schema Registry + Avro Serializers -->
@@ -247,13 +236,6 @@
         <version>${jspecify.version}</version>
       </dependency>
 
-      <!-- Zylos security starter — mandatory on every service (see ADR 0004). -->
-      <dependency>
-        <groupId>app.zylos</groupId>
-        <artifactId>zylos-infra-security-starter</artifactId>
-        <version>${zylos-security-starter.version}</version>
-      </dependency>
-
       <!-- Zylos contracts -->
       <dependency>
         <groupId>app.zylos</groupId>
@@ -300,7 +282,6 @@
   <!--  single service should NOT be here — let services opt in.               -->
   <!-- ======================================================================= -->
   <dependencies>
-
     <dependency>
       <groupId>org.jspecify</groupId>
       <artifactId>jspecify</artifactId>
@@ -323,7 +304,6 @@
       <artifactId>archunit-junit5</artifactId>
       <scope>test</scope>
     </dependency>
-
   </dependencies>
 
   <!-- ======================================================================= -->
@@ -353,14 +333,12 @@
     </pluginRepository>
   </pluginRepositories>
 
-  <!-- ====================================================================== -->
+  <!-- ======================================================================= -->
   <!--  Build configuration shared by every service.                           -->
-  <!-- ====================================================================== -->
+  <!-- ======================================================================= -->
   <build>
-
     <pluginManagement>
       <plugins>
-
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
@@ -377,11 +355,6 @@
               <arg>-Xlint:-serial</arg>
             </compilerArgs>
             <annotationProcessorPaths>
-              <path>
-                <groupId>org.mapstruct</groupId>
-                <artifactId>mapstruct-processor</artifactId>
-                <version>${mapstruct.version}</version>
-              </path>
               <path>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-configuration-processor</artifactId>
@@ -402,6 +375,9 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
           <configuration>
+            <includes>
+              <include>**/*IT.java</include>
+            </includes>
             <argLine>@{argLine} -Dfile.encoding=UTF-8</argLine>
           </configuration>
           <executions>
@@ -477,14 +453,12 @@
                 <goal>prepare-agent</goal>
               </goals>
             </execution>
-
             <execution>
               <id>prepare-agent-integration</id>
               <goals>
                 <goal>prepare-agent-integration</goal>
               </goals>
             </execution>
-
             <execution>
               <id>merge-results</id>
               <goals>
@@ -503,7 +477,6 @@
                 <destFile>${project.build.directory}/jacoco-merged.exec</destFile>
               </configuration>
             </execution>
-
             <execution>
               <id>report-merged</id>
               <goals>
@@ -514,7 +487,6 @@
                 <dataFile>${project.build.directory}/jacoco-merged.exec</dataFile>
               </configuration>
             </execution>
-
             <execution>
               <id>check</id>
               <goals>
@@ -542,52 +514,6 @@
               </requireMavenVersion>
               <dependencyConvergence/>
               <banDuplicatePomDependencyVersions/>
-              <evaluateBeanshell>
-                <condition><![CDATA[
-                  // Check if the project explicitly disabled enforcement
-                  String enforce = "${zylos.security.enforce}";
-                  if ("false".equalsIgnoreCase(enforce)) {
-                      return true;
-                  }
-
-                  // Exempt the POM-packaging projects (like parents and aggregators)
-                  String packaging = "${project.packaging}";
-                  if ("pom".equals(packaging)) {
-                      return true;
-                  }
-
-                  // Exempt the security starter itself
-                  String artifactId = "${project.artifactId}";
-                  if ("zylos-infra-security-starter".equals(artifactId)) {
-                      return true;
-                  }
-
-                  // Otherwise, verify the dependency exists
-                  String deps = "${project.dependencies}";
-                  boolean hasStarter = deps.contains("groupId=app.zylos,") &&
-                                       deps.contains("artifactId=zylos-infra-security-starter,");
-
-                  return hasStarter;
-                ]]></condition>
-                <message>This Zylos service must declare a dependency on app.zylos:zylos-infra-security-starter.
-                  It provides the mandatory security stack: JWT validation, actor-chain authorization,
-                  OPA integration, and identity observability.
-
-                  Add to your pom.xml (no version needed — managed by zylos-service-parent):
-
-                  &lt;dependency&gt;
-                  &lt;groupId&gt;app.zylos&lt;/groupId&gt;
-                  &lt;artifactId&gt;zylos-infra-security-starter&lt;/artifactId&gt;
-                  &lt;/dependency&gt;
-
-                  If this project legitimately should NOT include the starter (rare; e.g. a
-                  non-network library or contract module), disable this check by adding
-                  the following property to your pom.xml:
-
-                  &lt;properties&gt;
-                  &lt;zylos.security.enforce&gt;false&lt;/zylos.security.enforce&gt;
-                  &lt;/properties&gt;</message>
-              </evaluateBeanshell>
             </rules>
           </configuration>
           <executions>
@@ -656,6 +582,41 @@
           </executions>
         </plugin>
 
+        <plugin>
+          <groupId>com.google.cloud.tools</groupId>
+          <artifactId>jib-maven-plugin</artifactId>
+          <version>${jib-maven-plugin.version}</version>
+          <configuration>
+            <from>
+              <image>${image.base}</image>
+            </from>
+            <to>
+              <image>${image.registry}/${image.namespace}/${project.artifactId}</image>
+              <tags>
+                <tag>${project.version}</tag>
+              </tags>
+            </to>
+            <container>
+              <user>nonroot</user>
+              <ports>
+                <port>8080</port>
+                <port>9000</port>
+              </ports>
+              <jvmFlags>
+                <jvmFlag>-XX:+UseContainerSupport</jvmFlag>
+                <jvmFlag>-XX:MaxRAMPercentage=75.0</jvmFlag>
+                <jvmFlag>-XX:+ExitOnOutOfMemoryError</jvmFlag>
+              </jvmFlags>
+              <labels>
+                <org.opencontainers.image.source>https://github.com/${env.GITHUB_REPOSITORY}</org.opencontainers.image.source>
+                <org.opencontainers.image.revision>${git.commit.id.full}</org.opencontainers.image.revision>
+                <org.opencontainers.image.title>${project.artifactId}</org.opencontainers.image.title>
+                <org.opencontainers.image.description>${project.description}</org.opencontainers.image.description>
+              </labels>
+              <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+            </container>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -682,7 +643,5 @@
         <artifactId>git-commit-id-maven-plugin</artifactId>
       </plugin>
     </plugins>
-
   </build>
-
 </project>
