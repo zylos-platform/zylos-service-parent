@@ -202,7 +202,7 @@ jobs:
           JIB_TO_TAG: ${{ steps.compute-tag.outputs.tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ./mvnw -B -ntp -DskipTests \
+          ./mvnw -B -ntp -Dmaven.test.skip=true \
             compile \
             jib:build \
             -Djib.to.image=ghcr.io/${{ github.repository_owner }}/${{ inputs.service-name }} \
